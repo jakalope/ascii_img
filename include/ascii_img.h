@@ -1,45 +1,33 @@
 #pragma once
 
+#include "debug.h"
 #include "opencv2/opencv.hpp"
 #include <memory>
-
-#ifndef NDEBUG
-#include <cstdlib>
-#define ASSERT_LT(x, y)                                                        \
-  if (x >= y) {                                                                \
-    std::cerr << __FILE__ << ":" << __LINE__ << " assert failure: ";           \
-    std::cerr << #x " = " << x << " >= " #y " = " << y << std::endl;           \
-    std::abort();                                                              \
-  }
-#define ASSERT_LE(x, y)                                                        \
-  if (x > y) {                                                                 \
-    std::cerr << __FILE__ << ":" << __LINE__ << " assert failure: ";           \
-    std::cerr << #x " = " << x << " > " #y " = " << y << std::endl;            \
-    std::abort();                                                              \
-  }
-#define ASSERT_EQ(x, y)                                                        \
-  if (x != y) {                                                                \
-    std::cerr << __FILE__ << ":" << __LINE__ << " assert failure: ";           \
-    std::cerr << #x " = " << x << " != " #y " = " << y << std::endl;           \
-    std::abort();                                                              \
-  }
-#else
-#define ASSERT_LT(x, y)
-#define ASSERT_LE(x, y)
-#define ASSERT_EQ(x, y)
-#endif
 
 struct CirclesByIntensity {
   inline char operator()(unsigned char x) const noexcept {
     static constexpr char map[] = {' ', '.', 'o', '*', 'O', '0', '@'};
     static constexpr int16_t kMapElements = sizeof(map) / sizeof(map[0]);
     const int16_t i = kMapElements * x >> 8;
-    ASSERT_LE(0, i);
-    ASSERT_LT(i, kMapElements);
+    DEBUG_ASSERT_LE(0, i);
+    DEBUG_ASSERT_LT(i, kMapElements);
     return map[i];
   }
 };
 
+/**
+ * Converts an image to an Ascii character string.
+ *
+ * TransformOp   Callable type with signature char(unsigned char).
+ *
+ * mat                 Single-channel 8-bit input matrix.
+ * columns             Columns per line in resulting char array.
+ * font_aspect_ratio   Character width / height.
+ * transform_op        Function used to transform values from mat to characters.
+ *                     Defaults to CirclesByIntensity(), above.
+ *
+ * Returns a dynamically allocated character array wrapped in a unique_ptr.
+ */
 template <typename TransformOp = CirclesByIntensity>
 std::unique_ptr<char[]> asciiImg(const cv::Mat1b& mat,
                                  const int32_t columns,
@@ -65,7 +53,7 @@ std::unique_ptr<char[]> asciiImg(const cv::Mat1b& mat,
 
   // Resize the input image into the output wrapper.
   cv::resize(mat, img, img.size(), 0.f, 0.f, cv::INTER_NEAREST);
-  ASSERT_EQ((void*)img.data, (void*)udata);
+  DEBUG_ASSERT_EQ((void*)img.data, (void*)udata);
 
   // Transform the output data according to the TransformOp.
   for (int32_t i = 0; i < img.rows; ++i) {
